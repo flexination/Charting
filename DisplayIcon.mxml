@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" 
+ creationComplete="buildContextMenu()" height="110" width="216">
+ <mx:Image id="img" horizontalCenter="0"/>
+ <mx:Label text="{label}"  horizontalCenter="0" bottom="0"/>
+ <mx:Script>
+  <![CDATA[
+  	import mx.core.Application;
+   import flash.ui.ContextMenu;
+   import flash.ui.ContextMenuItem;
+   import flash.events.ContextMenuEvent;
+   
+   [Embed(source="assets/images/anodyne_logo.png")]
+   public const imgLogo:Class;
+   [Bindable] public var textStr:String;
+   public var useEmbeded:Boolean
+   
+	public function doEmbed():void {
+		if(useEmbeded){
+			img.source = imgLogo;
+		} else {
+			img.source = "assets/images/anodyne_logo.png";
+		}
+	}
+   
+	protected function buildContextMenu():void {
+		var myContextMenu:ContextMenu = new ContextMenu();
+		myContextMenu.addEventListener(ContextMenuEvent.MENU_SELECT, menuSelectHandler);
+		myContextMenu.hideBuiltInItems();
+		var items:Array = new Array();
+		var item:ContextMenuItem = new ContextMenuItem("Go To Our Site");
+		items.push(item);
+		var item2:ContextMenuItem = new ContextMenuItem("View as Line Chart");
+		items.push(item2);
+		var item3:ContextMenuItem = new ContextMenuItem("View as Pie Chart");
+		items.push(item3);
+		myContextMenu.customItems = items;
+		item.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, goThere);
+		item2.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, selectLineChart);
+		item3.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, selectPieChart);
+		this.contextMenu = myContextMenu;
+		doEmbed();
+	}
+
+    private function menuSelectHandler(event:ContextMenuEvent):void {
+        trace("menuSelectHandler: " + event);
+    }
+
+	private function goThere(event:ContextMenuEvent):void {
+        var u:URLRequest = new URLRequest("http://www.anodynehealth.com");
+        navigateToURL(u,"_blank");
+	}
+
+	private function selectLineChart(event:ContextMenuEvent):void {
+		mx.core.Application.application.cvsMain.visible = false;
+		mx.core.Application.application.cvsMain.height = 0;
+		mx.core.Application.application.cvsLineChart.height = 540;
+		mx.core.Application.application.cvsLineChart.visible = true;
+	}
+
+	private function selectPieChart(event:ContextMenuEvent):void {
+		mx.core.Application.application.cvsLineChart.visible = false;
+		mx.core.Application.application.cvsLineChart.height = 0
+		mx.core.Application.application.cvsMain.height = 540;
+		mx.core.Application.application.cvsMain.visible = true;
+	}
+  ]]>
+ </mx:Script>
+</mx:Canvas>

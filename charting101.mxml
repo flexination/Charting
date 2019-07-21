@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application 
+	xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:cmenu="*" xmlns:pod="com.anodynehealth.actionscripts.*" 
+	creationComplete="pageLoadedHandler()" 
+	backgroundColor="#FFFFFF" backgroundGradientAlphas="[0,0]" viewSourceURL="srcview/index.html">
+	<mx:Script>
+	  <![CDATA[
+        import mx.managers.DragManager;
+        import mx.core.DragSource;
+        import mx.events.DragEvent;
+        import flash.events.MouseEvent;
+        import mx.containers.Canvas;
+        import mx.containers.Panel;
+        import com.anodynehealth.actionscripts.DraggablePanel;
+	  	
+	    [Bindable] private var chartData:Array = new Array({month: "Jan", customernum: 150},{month: "Feb", customernum: 275},{month: "Mar", customernum: 350});
+	    [Bindable] private var chartData2:Array = new Array({month: "Apr", customernum: 110},{month: "May", customernum: 202},{month: "Jun", customernum: 206});
+	    [Bindable] private var chartData3:Array = new Array({month: "Jul", customernum: 150},{month: "Aug", customernum: 275},{month: "Sep", customernum: 350});
+	    [Bindable] private var chartData4:Array = new Array({month: "Oct", customernum: 110},{month: "Nov", customernum: 202},{month: "Dec", customernum: 206});
+		
+		// Save panel being resized.
+		protected var resizingPanel:Panel;
+		// Global coordinates of lower left corner of panel.
+		protected var initX:Number;
+		protected var initY:Number;
+        // Variables used to hold the mouse pointer's location in the title bar.
+        // Since the mouse pointer can be anywhere in the title bar, you have to 
+        // compensate for it when you drop the panel. 
+        public var xOff:Number;
+        public var yOff:Number;
+		// Define static constant for event type.
+		public static const RESIZE_CLICK:String = "resizeClick";
+
+		// Creation complete event handler adds the resizing event. 
+		// resizeButtonClicked is a custom event type for this application.
+		protected function pageLoadedHandler():void {
+			addEventListener(RESIZE_CLICK, resizeHandler);
+		}
+		
+        // Creation complete handler for each panel to add the 
+        // mouseMove event handler to the title bar. 
+        // Clicking the mouse button, then moving the mouse on the title bar
+        // initiates the d&d operation. 
+        private function myPanelCCHandler(event:Event):void {
+        	event.currentTarget.myTitleBar.addEventListener(MouseEvent.MOUSE_DOWN, tbMouseMoveHandler);
+        }
+        
+        // Function called by the canvas dragEnter event; enables dropping
+        private function doDragEnter(event:DragEvent):void  {
+            DragManager.acceptDragDrop(Canvas(event.target));
+        }
+
+        // Drag initiator event handler for
+        // the title bar's mouseMove event.
+        private function tbMouseMoveHandler(event:MouseEvent):void {
+            var dragInitiator:Panel=Panel(event.currentTarget.parent);
+            var ds:DragSource = new DragSource();
+            ds.addData(event.currentTarget.parent, 'panel'); 
+            
+    	    // Update the xOff and yOff variables to show the
+        	// current mouse location in the Panel.  
+            xOff = event.currentTarget.mouseX;
+            yOff = event.currentTarget.mouseY;
+            
+            // Initiate d&d. 
+            DragManager.doDrag(dragInitiator, ds, event);                    
+        }            
+
+        // Function called by the Canvas dragDrop event; 
+        // Sets the panel's position, 
+        // "dropping" it in its new location.
+        private function doDragDrop(event:DragEvent):void  {
+			// Compensate for the mouse pointer's location in the title bar.
+			var tempX:int = event.currentTarget.mouseX - xOff;
+			event.dragInitiator.x = tempX;
+			
+			var tempY:int = event.currentTarget.mouseY - yOff;
+			event.dragInitiator.y = tempY;
+			
+			// Put the dragged panel on top of all other components.
+			cvsMain.setChildIndex(Panel(event.dragInitiator), cvsMain.numChildren-1);			
+        }
+
+		// Resize area of panel clicked.
+		protected function resizeHandler(event:MouseEvent):void {
+			resizingPanel = Panel(event.target);
+			initX = event.localX;
+			initY = event.localY;
+			
+			// Place the rubber band over the panel. 
+			uuiDisplay.x = event.target.x;
+			uuiDisplay.y = event.target.y;
+			uuiDisplay.height = event.target.height;
+			uuiDisplay.width = event.target.width;
+			
+			// Make sure rubber band is on top of all other components.
+			cvsMain.setChildIndex(uuiDisplay, cvsMain.numChildren-1);
+			uuiDisplay.visible=true;
+			
+			// Add event handlers so that the SystemManager handles 
+			// the mouseMove and mouseUp events. 
+			// Set useCapure flag to true to handle these events 
+			// during the capture phase so no other component tries to handle them.
+			systemManager.addEventListener(MouseEvent.MOUSE_MOVE, mouseMoveHandler, true);
+			systemManager.addEventListener(MouseEvent.MOUSE_UP, mouseUpHandler, true);
+		}
+
+		// Resizes the rubber band as the user moves the cursor 
+		// with the mouse key down.
+		protected function mouseMoveHandler(event:MouseEvent):void {
+			event.stopImmediatePropagation();		
+				
+			uuiDisplay.height = uuiDisplay.height + event.stageY - initY;  
+			uuiDisplay.width = uuiDisplay.width + event.stageX - initX;
+			
+			initX = event.stageX;
+			initY = event.stageY;						
+		}
+		
+		// Sizes the panel to the size of the rubber band when the 
+		// user releases the mouse key. 
+		// Also removes the event handlers from the SystemManager.
+		protected function mouseUpHandler(event:MouseEvent):void {
+			event.stopImmediatePropagation();		
+
+			// Use a minimum panel size of 196 x 50.
+			if (uuiDisplay.height <= 50) {
+				resizingPanel.height = 50;  
+			} else {
+				resizingPanel.height = uuiDisplay.height;  				
+			}				
+			
+			if (uuiDisplay.width <= 196) {
+				resizingPanel.width = 196;				
+			} else {
+				resizingPanel.width = uuiDisplay.width;				
+			}				
+
+			// Put the resized panel on top of all other components.
+			cvsMain.setChildIndex(resizingPanel, cvsMain.numChildren-1);
+
+			// Hide the rubber band until next time.
+			uuiDisplay.x = 0;
+			uuiDisplay.y = 0;
+			uuiDisplay.height = 0;
+			uuiDisplay.width = 0;
+			uuiDisplay.visible = false;
+			
+			systemManager.removeEventListener(MouseEvent.MOUSE_MOVE, mouseMoveHandler, true);
+			systemManager.removeEventListener(MouseEvent.MOUSE_UP, mouseUpHandler, true	);
+		}
+			
+	    private function createChartLabel(item:Object, field:String, index:int, percent:Number):String {
+		  return item.month + ": " + item.customernum + "\n(" + Math.round(percent) + "%)";
+		}
+
+		private function setWedgeExplodeRadius():void {
+			pseries.perWedgeExplodeRadius = [0,0.15,0];
+		}
+		
+		private function resetWedgeExplodeRadius():void {
+			pseries.perWedgeExplodeRadius = [0,0,0];
+		}
+	  ]]>
+	</mx:Script>
+
+	<mx:Label text="New Customers" fontWeight="bold" textAlign="center" width="100%" fontSize="14"/>		
+    <mx:Canvas id="cvsMain"  
+        width="100%" height="100%"  
+        dragEnter="doDragEnter(event);" 
+        dragDrop="doDragDrop(event);">
+
+		<pod:DraggablePanel  id="dp1" title="New Customers Q1 2006" paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10" creationComplete="myPanelCCHandler(event);" y="10" x="444.5">
+			<mx:PieChart id="customernumChart" width="150" height="150" dataProvider="{chartData}" mouseOver="setWedgeExplodeRadius()" mouseOut="resetWedgeExplodeRadius()">
+			  <mx:series>
+			      <mx:PieSeries id="pseries" field="customernum" nameField="month"
+			      	labelFunction="createChartLabel" labelPosition="inside"
+			      	fills="[#6670CD, #D4D6F7, #A9AEDC]"
+			      	perWedgeExplodeRadius="[0,0,0]"/>
+			  </mx:series>
+		 	</mx:PieChart>
+		 	<mx:Legend dataProvider="{customernumChart}"  direction="horizontal"/>
+		</pod:DraggablePanel>
+		<mx:Spacer width="5"/>
+		<pod:DraggablePanel  id="dp2" title="New Customers Q2 2006" paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10" creationComplete="myPanelCCHandler(event);" x="714.5" y="10">
+			<mx:PieChart id="customernumChart2" width="150" height="150" dataProvider="{chartData2}" mouseOver="setWedgeExplodeRadius()" mouseOut="resetWedgeExplodeRadius()">
+			  <mx:series>
+			      <mx:PieSeries id="pseries2" field="customernum" nameField="month"
+			      	labelFunction="createChartLabel" labelPosition="inside"
+			      	fills="[#FFFF00, #FF00FF, #00FFFF]"
+			      	perWedgeExplodeRadius="[0,0,0,0,0]"/>
+			  </mx:series>
+		 	</mx:PieChart>
+		 	<mx:Legend dataProvider="{customernumChart2}"  direction="horizontal"/>
+		</pod:DraggablePanel>
+		<pod:DraggablePanel  id="dp3" title="New Customers Q3 2006" paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10" creationComplete="myPanelCCHandler(event);" y="272" x="444.5">
+			<mx:PieChart id="customernumChart3" width="150" height="150" dataProvider="{chartData3}" mouseOver="setWedgeExplodeRadius()" mouseOut="resetWedgeExplodeRadius()">
+			  <mx:series>
+			      <mx:PieSeries id="pseries3" field="customernum" nameField="month"
+			      	labelFunction="createChartLabel" labelPosition="inside"
+			      	fills="[#A9AEDC, #66FFCC, #BA9FDF]"
+			      	perWedgeExplodeRadius="[0,0,0]"/>
+			  </mx:series>
+		 	</mx:PieChart>
+		 	<mx:Legend dataProvider="{customernumChart3}"  direction="horizontal"/>
+		</pod:DraggablePanel>
+		<mx:Spacer width="5"/>
+	    <pod:DraggablePanel  id="dp4" title="New Customers Q4 2006" paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10" creationComplete="myPanelCCHandler(event);" x="714.5" y="272">
+	    	<mx:PieChart id="customernumChart4" width="150" height="150" dataProvider="{chartData4}" mouseOver="setWedgeExplodeRadius()" mouseOut="resetWedgeExplodeRadius()">
+	    	  <mx:series>
+	    	      <mx:PieSeries id="pseries4" field="customernum" nameField="month"
+	    	      	labelFunction="createChartLabel" labelPosition="inside"
+	    	      	fills="[#00FF00, #00FF00, #0000FF]"
+	    	      	perWedgeExplodeRadius="[0,0,0]"/>
+	    	  </mx:series>
+	    		</mx:PieChart>
+	     	<mx:Legend dataProvider="{customernumChart4}"  direction="horizontal"/>
+	    </pod:DraggablePanel>
+	    <pod:UpdateUIDisplay id="uuiDisplay" x="0" y="0" height="0" width="0" visible="false"/>
+	</mx:Canvas>
+    <mx:Canvas id="cvsLineChart"  
+        width="100%" height="0"  
+        dragEnter="doDragEnter(event);" 
+        dragDrop="doDragDrop(event);" visible="false">
+		<pod:DraggablePanel  id="dp5" title="New Customers Q1 2006" paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10" creationComplete="myPanelCCHandler(event);" y="10" x="444.5">
+			<mx:LineChart id="customernumChart5" width="150" height="150" dataProvider="{chartData}" showDataTips="true">
+				<mx:series>
+					<mx:LineSeries yField="customernum" displayName="New Customers"/>
+				</mx:series>
+				<mx:horizontalAxis>
+					<mx:CategoryAxis dataProvider="{chartData}" categoryField="month"/>
+				</mx:horizontalAxis>
+			</mx:LineChart>
+			<mx:Legend dataProvider="{customernumChart5}"  direction="horizontal"/> 
+		</pod:DraggablePanel>
+		<pod:DraggablePanel  id="dp6" title="New Customers Q1 2006" paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10" creationComplete="myPanelCCHandler(event);" x="714.5" y="10">
+			<mx:LineChart id="customernumChart6" width="150" height="150" dataProvider="{chartData2}" showDataTips="true">
+				<mx:series>
+					<mx:LineSeries yField="customernum" displayName="New Customers"/>
+				</mx:series>
+				<mx:horizontalAxis>
+					<mx:CategoryAxis dataProvider="{chartData2}" categoryField="month"/>
+				</mx:horizontalAxis>
+			</mx:LineChart>
+			<mx:Legend dataProvider="{customernumChart6}"  direction="horizontal"/> 
+		</pod:DraggablePanel>
+		<pod:DraggablePanel  id="dp7" title="New Customers Q1 2006" paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10" creationComplete="myPanelCCHandler(event);" y="272" x="444.5">
+			<mx:LineChart id="customernumChart7" width="150" height="150" dataProvider="{chartData3}" showDataTips="true">
+				<mx:series>
+					<mx:LineSeries yField="customernum" displayName="New Customers"/>
+				</mx:series>
+				<mx:horizontalAxis>
+					<mx:CategoryAxis dataProvider="{chartData3}" categoryField="month"/>
+				</mx:horizontalAxis>
+			</mx:LineChart>
+			<mx:Legend dataProvider="{customernumChart7}"  direction="horizontal"/> 
+		</pod:DraggablePanel>
+		<pod:DraggablePanel  id="dp8" title="New Customers Q1 2006" paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10" creationComplete="myPanelCCHandler(event);" x="714.5" y="272">
+			<mx:LineChart id="customernumChart8" width="150" height="150" dataProvider="{chartData4}" showDataTips="true">
+				<mx:series>
+					<mx:LineSeries yField="customernum" displayName="New Customers"/>
+				</mx:series>
+				<mx:horizontalAxis>
+					<mx:CategoryAxis dataProvider="{chartData4}" categoryField="month"/>
+				</mx:horizontalAxis>
+			</mx:LineChart>
+			<mx:Legend dataProvider="{customernumChart8}"  direction="horizontal"/> 
+		</pod:DraggablePanel>
+	</mx:Canvas>
+	<cmenu:DisplayIcon useEmbeded="true" toolTip="Right-click to display menu..." />
+</mx:Application>
